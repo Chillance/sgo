@@ -16,8 +16,11 @@ also be able to change to other versions easily.
 This has only been tested in Linux currently, but should work fine in Windows
 and Mac too.
 
+![Sgo](https://github.com/Chillance/sgo/blob/master/sgo.gif)
+
 ### Install
 This is one way of doing it, that should work:
+
 1. Clone the repo.
 2. Set GOPATH.
 3. Run "go get"
