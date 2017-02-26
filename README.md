@@ -36,7 +36,9 @@ as it's not smart enough to adapt perfectly to the size of the terminal yet.
 
 Navigate up and down with the arrow keys. Tab changes between the Go versions
 view and Go files table list view. "q"/"Q" or CTRL+C exists the program.
+Return key will start download the highlighted file.
 
 Note also that the download will resume if it doesn't finish and you download
 the same file again. This will also be shown as a big spike in the sparkline
 graph.
+
