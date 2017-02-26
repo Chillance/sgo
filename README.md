@@ -6,7 +6,8 @@ portable and can just be extracted to make Go compiler and tools pretty much
 ready to be used.
 
 New updates are released every so often, and this is where this tool comes in,
-trying to ease the progress to upgrade.
+trying to ease the process to upgrade. Repositories might not be as quick to
+have the latest version of Go available as quickly as it's released.
 
 Right now this tool just downloads and extracts, but eventually this might be
 made even smarter to setup and prepare environment variables and whatever else
