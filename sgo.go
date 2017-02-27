@@ -77,36 +77,36 @@ func updateGoVersions() {
 			strs = append(strs, fmt.Sprintf("%s", s))
 		}
 	}
+
 	uiVersionsList.Items = strs
 }
 
-func addLoggingText(text string) {
+func addTextToInfoPanel(text string) {
 	uiInfo.Items = append(uiInfo.Items, text)
 	height := uiInfo.GetHeight()
 	startPosition := len(uiInfo.Items) - height + 2
 	if startPosition < 0 {
 		startPosition = 0
 	}
-	uiInfo.Items = uiInfo.Items[startPosition:]
 
+	uiInfo.Items = uiInfo.Items[startPosition:]
 }
 
 func downloadFile(url string) error {
 
-	addLoggingText(fmt.Sprintf("Downloading %s...\n", url))
+	addTextToInfoPanel(fmt.Sprintf("Downloading %s...\n", url))
 	respch, err := grab.GetAsync(".", url)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error downloading %s: %v\n", url, err)
 		os.Exit(1)
 	}
 
-	addLoggingText(fmt.Sprintf("Initializing download...\n"))
+	addTextToInfoPanel(fmt.Sprintf("Initializing download...\n"))
 
 	uiDownloadProgress.Percent = 0
 
-	var resp *grab.Response
-
 	go func() {
+		var resp *grab.Response
 		t := time.NewTicker(100 * time.Millisecond)
 		var sinceLastTime uint64
 		var spdata []int
@@ -115,23 +115,26 @@ func downloadFile(url string) error {
 			case r := <-respch:
 				if r != nil {
 					resp = r
-					addLoggingText(fmt.Sprintf("Downloading...\n"))
+					addTextToInfoPanel(fmt.Sprintf("Downloading...\n"))
 				}
 			case <-t.C:
+
 				if resp == nil {
 					continue
 				}
+
 				if resp.Error != nil {
 					fmt.Fprintf(os.Stderr, "Error downloading %s: %v\n", url, resp.Error)
 					//return resp.Error
 					return
 				}
+
 				if resp.IsComplete() {
-					addLoggingText(fmt.Sprintf("Successfully downloaded to ./%s\n", resp.Filename))
+					addTextToInfoPanel(fmt.Sprintf("Successfully downloaded to ./%s\n", resp.Filename))
 
 					uiDownloadProgress.Percent = 100
 
-					addLoggingText("Verifying...\n")
+					addTextToInfoPanel("Verifying...\n")
 					sha := downloadFileSHA[getGoFile()]
 
 					var hasher hash.Hash
@@ -140,40 +143,45 @@ func downloadFile(url string) error {
 					} else if len(sha) == 40 {
 						hasher = sha1.New()
 					} else {
-						addLoggingText(fmt.Sprintf("Unknown hash length of %d.\n", len(sha)))
+						addTextToInfoPanel(fmt.Sprintf("Unknown hash length of %d.\n", len(sha)))
 						return
 					}
 
 					f, err := os.Open(resp.Filename)
 					if err != nil {
-						addLoggingText(fmt.Sprintf(err.Error()))
+						addTextToInfoPanel(fmt.Sprintf(err.Error()))
 						return
 					}
 					defer f.Close()
 
 					if _, err := io.Copy(hasher, f); err != nil {
-						addLoggingText(fmt.Sprintf(err.Error()))
+						addTextToInfoPanel(fmt.Sprintf(err.Error()))
 						return
 					}
+
 					fileSHA := hex.EncodeToString(hasher.Sum(nil))
-
 					if sha != fileSHA {
-						addLoggingText("Download file doesn't match SHA.\n")
-						addLoggingText(fmt.Sprintf("File SHA: %s\nExpected SHA:\n%s\n", fileSHA, sha))
+						addTextToInfoPanel("Download file doesn't match SHA.\n")
+						addTextToInfoPanel(fmt.Sprintf("File SHA: %s\nExpected SHA:\n%s\n", fileSHA, sha))
 						return
 					}
 
-					addLoggingText(fmt.Sprintf("File SHA matches: %s\n", fileSHA))
+					addTextToInfoPanel(fmt.Sprintf("File SHA matches: %s\n", fileSHA))
 
-					addLoggingText(fmt.Sprintf("Extracting...\n"))
+					addTextToInfoPanel(fmt.Sprintf("Extracting...\n"))
+
 					if strings.Contains(resp.Filename, ".zip") {
 						archiver.Zip.Open(resp.Filename, ".")
 					} else if strings.Contains(resp.Filename, ".tar.gz") {
 						archiver.TarGz.Open(resp.Filename, ".")
 					}
+
 					os.Rename("go", getGoVersion())
-					addLoggingText(fmt.Sprintf("Done extracting.\n"))
+
+					addTextToInfoPanel(fmt.Sprintf("Done extracting.\n"))
+
 					t.Stop()
+
 					return
 				}
 
@@ -186,18 +194,19 @@ func downloadFile(url string) error {
 			}
 		}
 	}()
+
 	return nil
 }
 
 func updateFilesView(s string) error {
 	var err error
-
 	var b bytes.Buffer
-	table := tablewriter.NewWriter(&b)
-
 	var headers []string
 	var data [][]string
+
 	goFiles = nil
+
+	table := tablewriter.NewWriter(&b)
 	doc.Find("div[id=\"" + strings.TrimSpace(s) + "\"] > .expanded > table > thead > tr > th").Each(func(i int, s *goquery.Selection) {
 		headers = append(headers, s.Text())
 	})
@@ -225,6 +234,7 @@ func updateFilesView(s string) error {
 		}
 		data = append(data, row)
 	})
+
 	table.SetHeader(headers)
 	//table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetBorder(false)
@@ -235,7 +245,6 @@ func updateFilesView(s string) error {
 	checkLimits()
 
 	strs := strings.Split(b.String(), "\n")
-
 	for index, s := range strs {
 		if index == selectedGoFile+2 { // +2 To skip headers.
 			strs[index] = "[" + strings.TrimRight(s, "\n") + "](fg-white,bg-blue)\n"
@@ -267,6 +276,19 @@ func checkLimits() {
 		selectedGoFile = 0
 	} else if selectedGoFile >= len(goFiles) {
 		selectedGoFile = len(goFiles) - 1
+	}
+}
+
+func updateViewInFocus() {
+	if viewInFocus == viewGoFiles {
+		uiFilesList.BorderLabelBg = ui.ColorWhite
+		//uiFilesList.BorderLabelFg = ui.ColorBlack
+		//uiVersionsList.BorderLabelFg = ui.ColorGreen
+		uiVersionsList.BorderLabelBg = ui.ColorDefault
+	} else if viewInFocus == viewGoVersions {
+		uiFilesList.BorderLabelBg = ui.ColorDefault
+		//uiFilesList.BorderLabelFg = ui.ColorGreen
+		uiVersionsList.BorderLabelBg = ui.ColorWhite
 	}
 }
 
@@ -357,11 +379,9 @@ func main() {
 		defer mutex.Unlock()
 		if viewInFocus == viewGoFiles {
 			selectedGoFile++
-			checkLimits()
 			updateFilesView(getGoVersion())
 		} else if viewInFocus == viewGoVersions {
 			selectedGoVersion++
-			checkLimits()
 			updateGoVersions()
 			updateFilesView(getGoVersion())
 		}
@@ -369,21 +389,14 @@ func main() {
 	ui.Handle("/sys/kbd/<tab>", func(ui.Event) {
 		if viewInFocus == viewGoFiles {
 			viewInFocus = viewGoVersions
-			uiFilesList.BorderLabelBg = ui.ColorDefault
-			//uiFilesList.BorderLabelFg = ui.ColorGreen
-			uiVersionsList.BorderLabelBg = ui.ColorWhite
 		} else if viewInFocus == viewGoVersions {
 			viewInFocus = viewGoFiles
-			uiFilesList.BorderLabelBg = ui.ColorWhite
-			//uiFilesList.BorderLabelFg = ui.ColorBlack
-			//uiVersionsList.BorderLabelFg = ui.ColorGreen
-			uiVersionsList.BorderLabelBg = ui.ColorDefault
 		}
+		updateViewInFocus()
 	})
 	ui.Handle("/timer/", func(e ui.Event) {
 		ui.Render(ui.Body)
 	})
-
 	ui.Handle("/sys/wnd/resize", func(e ui.Event) {
 		ui.Body.Width = ui.TermWidth()
 		ui.Body.Align()
@@ -391,6 +404,7 @@ func main() {
 		ui.Render(ui.Body)
 	})
 
-	uiFilesList.BorderLabelBg = ui.ColorWhite
+	updateViewInFocus()
+
 	ui.Loop()
 }
